@@ -78,6 +78,9 @@ out/
 *.cert
 id_rsa*
 secrets.json
+*serviceAccount*.json
+*ServiceAccount*.json
+*credentials*.json
 
 # ==========================================
 # AI / ML Models, Embeddings & Vector DBs
