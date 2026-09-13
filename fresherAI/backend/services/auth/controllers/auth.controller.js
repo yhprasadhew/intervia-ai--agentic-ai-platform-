@@ -2,6 +2,7 @@ import { getAuth } from "firebase-admin/auth";
 import { app } from "../configs/firebase.js";
 import User from "../models/user.model.js";
 import crypto from "node:crypto";
+import redis from "../../../shared/redis/redis.js";
 
 export const GoogleAuth = async (req, res) => {
   try {
@@ -34,6 +35,19 @@ export const GoogleAuth = async (req, res) => {
     // Generate session ID
     const sessionId = crypto.randomUUID();
 
+    // Store session in Redis
+    await redis.set(
+      `session:${sessionId}`,
+      JSON.stringify({
+        userId: user._id,
+        name: user.name,
+        email: user.email,
+        interviewCoins: user.interviewCoin,
+      }),
+      "EX",
+      7 * 24 * 60 * 60
+    );
+
     // Set session cookie
     res.cookie("session", sessionId, {
       httpOnly: true,
@@ -57,6 +71,39 @@ export const GoogleAuth = async (req, res) => {
     return res.status(401).json({
       success: false,
       message: "Authentication failed",
+    });
+  }
+};
+
+
+export const Logout = async (req, res) => {
+  try {
+    // Get session ID from cookie
+    const sessionId = req.cookies?.session;
+
+    // Delete session from Redis
+    if (sessionId) {
+      await redis.del(`session:${sessionId}`);
+    }
+
+    // Clear session cookie
+    res.clearCookie("session", {
+      httpOnly: true,
+      secure: false,
+      sameSite: "strict",
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Logout successful",
+    });
+
+  } catch (err) {
+    console.error("Logout error:", err);
+
+    return res.status(500).json({
+      success: false,
+      message: "Logout failed",
     });
   }
 };
