@@ -1,21 +1,13 @@
 import express from "express";
 import dotenv from "dotenv";
-import path from "path";
-import { fileURLToPath } from "url";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Load environment variables from gateway .env or parent backend .env
-dotenv.config({ path: path.resolve(__dirname, ".env"), quiet: true });
-dotenv.config({ path: path.resolve(__dirname, "../.env"), quiet: true });
+dotenv.config();
+import proxy from "express-http-proxy"
 
 const app = express();
-const PORT = process.env.PORT || 8000;
+const PORT = process.env.PORT || 6000;
 
-app.get("/", (req, res) => {
-  res.send("Hello, prasad!");
-});
+app.use("/auth", proxy(process.env.AUTH_SERVICE_URL));
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
