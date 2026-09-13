@@ -2,13 +2,20 @@
   "name": "backend",
   "version": "1.0.0",
   "description": "",
+  "type": "module",
   "main": "index.js",
   "scripts": {
+    "dev": "concurrently -n \"gateway,auth\" -c \"cyan,magenta\" \"npm run dev:gateway\" \"npm run dev:auth\"",
+    "dev:gateway": "npm --prefix gateway run dev",
+    "dev:auth": "npm --prefix services/auth run dev",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "ioredis": "^6.0.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
   }
 }

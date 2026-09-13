@@ -1,6 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import { connectDB } from "./configs/db.js";
+import authRouter from "./routes/auth.route.js";
 
 dotenv.config();
 
@@ -17,6 +18,8 @@ app.get("/", (req, res) => {
     status: "running",
   });
 });
+
+app.use("/", authRouter);
 
 // Start server after database connection
 const startServer = async () => {
