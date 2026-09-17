@@ -4,6 +4,16 @@ import { FiArrowRight, FiMenu, FiX } from "react-icons/fi";
 
 const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [user, setUser] = useState(null);
+
+  React.useEffect(() => {
+    try {
+      const saved = localStorage.getItem("intervia_user");
+      if (saved) setUser(JSON.parse(saved));
+    } catch (e) {
+      console.warn(e);
+    }
+  }, []);
 
   return (
     <header className="sticky top-0 left-0 right-0 z-50">
@@ -12,7 +22,7 @@ const Navbar = () => {
         <span className="inline-block w-2 h-2 rounded-full bg-[#2F5D50] animate-pulse" />
         <span>v1.2 Released: Next-gen Real-time Voice & System Design Canvas</span>
         <Link
-          to="/dashboard"
+          to={user ? "/dashboard" : "/login"}
           className="underline text-slate-300 hover:text-white ml-2 text-[12px]"
         >
           Try simulation →
@@ -55,19 +65,42 @@ const Navbar = () => {
 
           {/* Desktop Actions */}
           <div className="hidden sm:flex items-center gap-3">
-            <Link
-              to="/dashboard"
-              className="px-4 py-2 text-[14px] text-[#1C1B19]/70 hover:text-[#1C1B19] transition-colors font-medium"
-            >
-              Log in
-            </Link>
-            <Link
-              to="/dashboard"
-              className="px-4 py-2 rounded-sm bg-[#1C1B19] hover:bg-[#2F5D50] text-white text-[14px] font-medium transition-colors shadow-sm flex items-center gap-1.5"
-            >
-              <span>Start practicing</span>
-              <FiArrowRight className="w-3.5 h-3.5" />
-            </Link>
+            {user ? (
+              <>
+                <Link
+                  to="/dashboard"
+                  className="px-3.5 py-1.5 rounded-sm border border-[#1C1B19]/15 text-[13.5px] font-mono hover:border-[#2F5D50] hover:text-[#2F5D50] transition-colors flex items-center gap-2"
+                >
+                  <div className="w-5 h-5 rounded-full bg-[#2F5D50] text-white flex items-center justify-center text-[10px] font-mono">
+                    {(user.name || "U").charAt(0).toUpperCase()}
+                  </div>
+                  <span>{user.name?.split(" ")[0] || "Dashboard"}</span>
+                </Link>
+                <Link
+                  to="/dashboard"
+                  className="px-4 py-2 rounded-sm bg-[#1C1B19] hover:bg-[#2F5D50] text-white text-[14px] font-medium transition-colors shadow-sm flex items-center gap-1.5"
+                >
+                  <span>Go to Practice</span>
+                  <FiArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  className="px-4 py-2 text-[14px] text-[#1C1B19]/70 hover:text-[#1C1B19] transition-colors font-medium"
+                >
+                  Log in
+                </Link>
+                <Link
+                  to="/login"
+                  className="px-4 py-2 rounded-sm bg-[#1C1B19] hover:bg-[#2F5D50] text-white text-[14px] font-medium transition-colors shadow-sm flex items-center gap-1.5"
+                >
+                  <span>Start practicing</span>
+                  <FiArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -114,21 +147,34 @@ const Navbar = () => {
               </a>
             </div>
             <div className="pt-4 border-t border-[#1C1B19]/10 flex flex-col gap-2.5">
-              <Link
-                to="/dashboard"
-                onClick={() => setMobileMenuOpen(false)}
-                className="w-full text-center py-2.5 rounded-sm border border-[#1C1B19]/20 text-[14px] font-medium text-[#1C1B19]"
-              >
-                Log in
-              </Link>
-              <Link
-                to="/dashboard"
-                onClick={() => setMobileMenuOpen(false)}
-                className="w-full text-center py-2.5 rounded-sm bg-[#1C1B19] text-white text-[14px] font-medium flex items-center justify-center gap-1.5"
-              >
-                <span>Start practicing</span>
-                <FiArrowRight className="w-3.5 h-3.5" />
-              </Link>
+              {user ? (
+                <Link
+                  to="/dashboard"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full text-center py-2.5 rounded-sm bg-[#2F5D50] text-white text-[14px] font-medium flex items-center justify-center gap-1.5"
+                >
+                  <span>Candidate Dashboard ({user.name?.split(" ")[0] || "Me"})</span>
+                  <FiArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    to="/login"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="w-full text-center py-2.5 rounded-sm border border-[#1C1B19]/20 text-[14px] font-medium text-[#1C1B19]"
+                  >
+                    Log in
+                  </Link>
+                  <Link
+                    to="/login"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="w-full text-center py-2.5 rounded-sm bg-[#1C1B19] text-white text-[14px] font-medium flex items-center justify-center gap-1.5"
+                  >
+                    <span>Start practicing</span>
+                    <FiArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         )}

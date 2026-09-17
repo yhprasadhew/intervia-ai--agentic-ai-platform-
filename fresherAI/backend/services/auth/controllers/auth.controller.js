@@ -42,7 +42,7 @@ export const GoogleAuth = async (req, res) => {
         userId: user._id,
         name: user.name,
         email: user.email,
-        interviewCoins: user.interviewCoin,
+        interviewCoins: user.interviewCoins ?? 150,
       }),
       "EX",
       7 * 24 * 60 * 60
@@ -51,30 +51,64 @@ export const GoogleAuth = async (req, res) => {
     // Set session cookie
     res.cookie("session", sessionId, {
       httpOnly: true,
-      secure: false, // true in production with HTTPS
-      sameSite: "strict",
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     return res.status(200).json({
       success: true,
-      message: "Google authentication successful",
+      message: "Authentication successful",
       user: {
         id: user._id,
         name: user.name,
         email: user.email,
+        interviewCoins: user.interviewCoins ?? 150,
       },
     });
   } catch (err) {
-    console.error("Google authentication error:", err);
+    console.error("Authentication error:", err);
 
     return res.status(401).json({
       success: false,
-      message: "Authentication failed",
+      message: err.message || "Authentication failed",
     });
   }
 };
 
+export const GetMe = async (req, res) => {
+  try {
+    const sessionId = req.cookies?.session;
+
+    if (!sessionId) {
+      return res.status(401).json({
+        success: false,
+        message: "Not authenticated",
+      });
+    }
+
+    const sessionData = await redis.get(`session:${sessionId}`);
+    if (!sessionData) {
+      return res.status(401).json({
+        success: false,
+        message: "Session expired or invalid",
+      });
+    }
+
+    const sessionUser = JSON.parse(sessionData);
+
+    return res.status(200).json({
+      success: true,
+      user: sessionUser,
+    });
+  } catch (err) {
+    console.error("GetMe error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to retrieve session",
+    });
+  }
+};
 
 export const Logout = async (req, res) => {
   try {
@@ -89,15 +123,14 @@ export const Logout = async (req, res) => {
     // Clear session cookie
     res.clearCookie("session", {
       httpOnly: true,
-      secure: false,
-      sameSite: "strict",
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
     });
 
     return res.status(200).json({
       success: true,
       message: "Logout successful",
     });
-
   } catch (err) {
     console.error("Logout error:", err);
 
