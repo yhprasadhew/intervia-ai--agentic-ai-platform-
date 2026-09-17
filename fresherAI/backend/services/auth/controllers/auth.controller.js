@@ -2,7 +2,7 @@ import { getAuth } from "firebase-admin/auth";
 import { app } from "../configs/firebase.js";
 import User from "../models/user.model.js";
 import crypto from "node:crypto";
-import redis from "../../../shared/redis/redis.js";
+import { setSession, deleteSession } from "../../../shared/session/sessionStore.js";
 
 export const GoogleAuth = async (req, res) => {
   try {
@@ -27,7 +27,7 @@ export const GoogleAuth = async (req, res) => {
     if (!user) {
       user = await User.create({
         firebaseUid: decoded.uid,
-        name: decoded.name || "User",
+        name: decoded.name || (decoded.email ? decoded.email.split("@")[0] : "Candidate"),
         email: decoded.email,
       });
     }
@@ -35,18 +35,15 @@ export const GoogleAuth = async (req, res) => {
     // Generate session ID
     const sessionId = crypto.randomUUID();
 
-    // Store session in Redis
-    await redis.set(
-      `session:${sessionId}`,
-      JSON.stringify({
-        userId: user._id,
-        name: user.name,
-        email: user.email,
-        interviewCoins: user.interviewCoins ?? 150,
-      }),
-      "EX",
-      7 * 24 * 60 * 60
-    );
+    const sessionPayload = {
+      userId: user._id,
+      name: user.name,
+      email: user.email,
+      interviewCoins: user.interviewCoins ?? 150,
+    };
+
+    // Store session via centralized sessionStore (Redis + in-memory fallback)
+    await setSession(sessionId, sessionPayload);
 
     // Set session cookie
     res.cookie("session", sessionId, {
@@ -77,47 +74,19 @@ export const GoogleAuth = async (req, res) => {
 };
 
 export const GetMe = async (req, res) => {
-  try {
-    const sessionId = req.cookies?.session;
-
-    if (!sessionId) {
-      return res.status(401).json({
-        success: false,
-        message: "Not authenticated",
-      });
-    }
-
-    const sessionData = await redis.get(`session:${sessionId}`);
-    if (!sessionData) {
-      return res.status(401).json({
-        success: false,
-        message: "Session expired or invalid",
-      });
-    }
-
-    const sessionUser = JSON.parse(sessionData);
-
-    return res.status(200).json({
-      success: true,
-      user: sessionUser,
-    });
-  } catch (err) {
-    console.error("GetMe error:", err);
-    return res.status(500).json({
-      success: false,
-      message: "Failed to retrieve session",
-    });
-  }
+  // req.user is guaranteed and attached by authMiddleware
+  return res.status(200).json({
+    success: true,
+    user: req.user,
+  });
 };
 
 export const Logout = async (req, res) => {
   try {
-    // Get session ID from cookie
-    const sessionId = req.cookies?.session;
+    const sessionId = req.sessionId || req.cookies?.session;
 
-    // Delete session from Redis
     if (sessionId) {
-      await redis.del(`session:${sessionId}`);
+      await deleteSession(sessionId);
     }
 
     // Clear session cookie
@@ -139,4 +108,4 @@ export const Logout = async (req, res) => {
       message: "Logout failed",
     });
   }
-};
+};

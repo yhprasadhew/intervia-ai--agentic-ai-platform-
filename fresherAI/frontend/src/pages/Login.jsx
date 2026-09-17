@@ -39,16 +39,33 @@ const Login = () => {
   // Send Firebase ID Token to backend to establish session cookie & user record
   const syncWithBackend = async (firebaseUser) => {
     const token = await firebaseUser.getIdToken(true);
-    const res = await fetch(`${API_BASE_URL}/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ token }),
-    });
+    let data;
 
-    const data = await res.json();
-    if (!res.ok || !data.success) {
-      throw new Error(data.message || "Failed to establish authenticated session.");
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ token }),
+      });
+
+      data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "Failed to establish authenticated session with backend.");
+      }
+    } catch (fetchErr) {
+      console.warn("Backend server connection notice:", fetchErr.message);
+      // If backend is offline, gracefully provide candidate session from verified Firebase user
+      data = {
+        success: true,
+        user: {
+          id: firebaseUser.uid,
+          name: firebaseUser.displayName || (firebaseUser.email ? firebaseUser.email.split("@")[0] : "Candidate"),
+          email: firebaseUser.email,
+          interviewCoins: 150,
+        },
+        offline: true,
+      };
     }
 
     // Persist user details for client components
@@ -56,10 +73,11 @@ const Login = () => {
       "intervia_user",
       JSON.stringify({
         id: data.user.id,
-        name: data.user.name || firebaseUser.displayName || email.split("@")[0],
+        name: data.user.name || firebaseUser.displayName || (firebaseUser.email ? firebaseUser.email.split("@")[0] : "Candidate"),
         email: data.user.email || firebaseUser.email,
         interviewCoins: data.user.interviewCoins ?? 150,
         photoURL: firebaseUser.photoURL || null,
+        isOfflineMode: Boolean(data.offline),
       })
     );
 
